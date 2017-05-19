@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title></title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="assets/css/style.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="modal fade" tabindex="-1" role="dialog">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h4 class="modal-title">Enter a display name below</h4>
+                    </div>
+                    <div class="modal-body">
+                        <h2 id="nameInfo">Chose a unique display name</h2>
+                        <div class="input-group">
+                            <span class="input-group-btn">
+                             <button class="btn btn-default" type="button" id="nameSubmit">Submit</button>
+                           </span>
+                            <input type="text" class="form-control" placeholder="Enter name" id="nameText">
+                        </div>
+                    </div>
+                </div>
+                <!-- /.modal-content -->
+            </div>
+            <!-- /.modal-dialog -->
+        </div>
+        <!-- /.modal -->
+    </div>
+    <div class="col-md-6">
+        <button type="button" class="btn btn-warning" id="createGame">Create new Game</button>
+        <h1>Join a game</h1>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+    <script src="https://www.gstatic.com/firebasejs/4.0.0/firebase.js"></script>
+    <script>
+    // Initialize Firebase
+    var config = {
+        apiKey: "AIzaSyD-G_fMO2LW5nnk_Uy3M3zEPH5uByvUy3s",
+        authDomain: "rpsgame-90c40.firebaseapp.com",
+        databaseURL: "https://rpsgame-90c40.firebaseio.com",
+        projectId: "rpsgame-90c40",
+        storageBucket: "rpsgame-90c40.appspot.com",
+        messagingSenderId: "852317745980"
+    };
+    firebase.initializeApp(config);
+    </script>
+    <script type="text/javascript" src="assets/js/main.js"></script>
+</body>
+
+</html>

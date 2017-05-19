@@ -1,0 +1,5 @@
+.modal-lg {
+    margin: 0 auto;
+    top: 47%;
+    transform: translateY(-50%);
+}
