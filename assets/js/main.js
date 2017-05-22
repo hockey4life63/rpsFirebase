@@ -143,7 +143,10 @@ function makeMessage(name, message) {
     div.addClass("message");
     newP.text(name + ": " + message);
     div.append(newP);
-    $("#chatBox").append(div);
+    $("#chatBox").append(div).animate({
+        scrollTop: div.offset().top
+    }, 100)
+
 }
 
 function setupChat(key) {
@@ -171,7 +174,30 @@ function quitGame(key) {
     $("#textSubmit").off("click");
     $("#choiceSubmit").off("click");
     $(".rpsChoice").off("click");
+    $("yesPlay").off();
+    $("#noPlay").off();
     callGameBtn();
+}
+
+function winCheck(yourChoice, theirChoice) {
+    let check = {
+            Rock: 0,
+            Paper: 1,
+            Scissors: 2
+        }
+        /*if (a == b) ties++;
+else if ((a - b + 3) % 3 == 1) wins++;
+else losses++;*/
+    let you = check[yourChoice];
+    let them = check[theirChoice];
+    if (you === them) {
+        return "You Guys Tied!"
+    }
+    if ((you - them + 3) % 3 === 1) {
+        return "You Won!"
+    } else {
+        return "They Won :/"
+    }
 }
 
 function gameState(key) {
@@ -185,7 +211,9 @@ function gameState(key) {
     // }
     let currentGame = gameRef.child(key);
     let currentChoice = "";
+    let theirChoice = "";
     let host = false;
+    let playAgianHtml = '<div> <h1 class="col-md-12">Play agian?</h1><button type="button" class="btn btn-primary" id="yesPlay">Yes</button><button type="button" class="btn btn-danger" id="noPlay">No</button></div>'
     currentGame.once("value", function(snap) {
         if (snap.val().createrName === currentUser) {
             host = true;
@@ -225,8 +253,12 @@ function gameState(key) {
                 break;
 
             case state.choose:
+                $(".winDisplay").html("");
+                $("#yourChoice").text("");
+                $("#theirChoice").text("");
                 $(".rpsChoice").on("click", function() {
                     currentChoice = $(this).attr("choice");
+                    $("#yourChoice").text(currentChoice);
                 })
                 $("#choiceSubmit").on("click", function() {
                     currentGame.once("value", function(snap) {
@@ -242,21 +274,21 @@ function gameState(key) {
 
                     }).then(function(snap) {
                         if (host) {
-                            currentGame.once("value", function(snap) {
-                                if (snap.val().joinerChoice !== "") {
-                                    currentGame.update({
-                                        state: state.winner
-                                    })
-                                }
-                            })
+
+                            if (snap.val().joinerChoice !== "") {
+                                currentGame.update({
+                                    state: state.winner
+                                })
+                            }
+
                         } else {
-                            currentGame.once("value", function(snap) {
-                                if (snap.val().hostChoice !== "") {
-                                    currentGame.update({
-                                        state: state.winner
-                                    })
-                                }
-                            })
+
+                            if (snap.val().hostChoice !== "") {
+                                currentGame.update({
+                                    state: state.winner
+                                })
+                            }
+
                         }
                     })
 
@@ -265,14 +297,78 @@ function gameState(key) {
                 break;
 
             case state.winner:
-                $("#choiceSubmit").off("click")
-                $(".rpsChoice").off("click")
-                console.log("Made it to Winner State!!!!!")
-
+                $("#choiceSubmit").off("click");
+                $(".rpsChoice").off("click");
+                if (host) {
+                    currentGame.child("joinerChoice").once("value", function(snap) {
+                        theirChoice = snap.val();
+                    })
+                } else {
+                    currentGame.child("hostChoice").once("value", function(snap) {
+                        theirChoice = snap.val();
+                    })
+                }
+                $("#theirChoice").text(theirChoice);
+                currentGame.update({
+                    joinerChoice: "",
+                    hostChoice: ""
+                })
+                if (yourChoice === "") {
+                    $(".winDisplay").text("You didnt pick anything You lose")
+                } else if (theirChoice === "") {
+                    $(".winDisplay").text("They didnt pick anything YOU WIN!")
+                } else if (yourChoice === "" && theirChoice === "") {
+                    $(".winDisplay").text("You both didnt pick anything you guys paying attention");
+                } else {
+                    $(".winDisplay").text(winCheck(currentChoice, theirChoice));
+                }
+                setTimeout(function() {
+                    currentGame.update({
+                        state: state.playagian
+                    })
+                }, 5000)
                 break;
 
             case state.playagian:
-
+                console.log("at playagian state");
+                $(".winDisplay").html(playAgianHtml);
+                $("#yesPlay").on("click", function() {
+                    currentGame.once("value", function(snap) {
+                        if (host) {
+                            currentGame.update({
+                                hostChoice: "yes"
+                            })
+                        } else {
+                            currentGame.update({
+                                joinerChoice: "yes"
+                            })
+                        }
+                    }).then(function(snap) {
+                        if (host) {
+                            if (snap.val().joinerChoice === "yes") {
+                                currentGame.update({
+                                    joinerChoice: "",
+                                    hostChoice: "",
+                                    state: state.choose
+                                })
+                            }
+                        } else {
+                            if (snap.val().hostChoice === "yes") {
+                                currentGame.update({
+                                    joinerChoice: "",
+                                    hostChoice: "",
+                                    state: state.choose
+                                })
+                            }
+                        }
+                    })
+                    $("yesPlay").off();
+                    $("#noPlay").off();
+                })
+                $("#noPlay").on("click", function() {
+                    currentGame.remove();
+                    quitGame();
+                })
                 break;
 
             case state.quit:
