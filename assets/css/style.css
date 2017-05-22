@@ -3,3 +3,27 @@
     top: 47%;
     transform: translateY(-50%);
 }
+
+.modal-body {
+    /*min-height: 300px;
+*/
+}
+
+#chatBox {
+    height: 300px;
+    background: gray;
+    overflow-y: scroll;
+    border: 3px solid black;
+}
+
+.choices {
+    text-align: center;
+}
+
+.winDisplay {
+    text-align: center;
+}
+
+#textMessage {
+    resize: none;
+}
