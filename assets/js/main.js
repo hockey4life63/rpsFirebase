@@ -39,6 +39,7 @@ let timerObj = {
 $("#nameSubmit").on("click", function() {
     let name = $("#nameText").val().trim();
     let exists = true;
+    //checks if username exists already
     userRef.child(name).once("value", function(snap) {
         exists = (snap.val() !== null)
     }).then(function() {
@@ -73,12 +74,15 @@ $("#createGame").on("click", function() {
 })
 
 function callGameBtn() {
+    //checks for games to join
     gameRef.orderByChild("state").equalTo(state.open).on("child_added", function(snap) {
-        if (snap.val().createrName !== currentUser) {
-            console.log("game Found")
-            createGameBtn(snap.key);
-        }
-    })
+            //excludes your games
+            if (snap.val().createrName !== currentUser) {
+                console.log("game Found")
+                createGameBtn(snap.key);
+            }
+        })
+        //removes if the game changes to different game state
     gameRef.on("child_changed", function(snap) {
         if (snap.val().state !== state.open) {
             $("#" + snap.key).remove()
@@ -95,6 +99,7 @@ function createGameBtn(key) {
     }).then(function() {
         let btn = $("<button>");
         btn.text("Join " + name + "'s game");
+        //store key to game in database
         btn.attr("data-key", key);
         btn.attr("id", key)
         btn.addClass("btn btn-primary joinGame");
@@ -118,7 +123,8 @@ function createGameBtn(key) {
 }
 
 function setGameBox(key) {
-    let name = ""
+    let name = "";
+    //sets name of the players
     gameRef.child(key).once("value", function(snap) {
         if (currentUser === snap.val().joinerName) {
             $("#theirName").text(snap.val().createrName)
@@ -126,6 +132,7 @@ function setGameBox(key) {
             $("#theirName").text(snap.val().joinerName)
         }
     }).then(function() {
+        //makes modal appear and not be closeable
         $("#gameBox").modal({ backdrop: 'static', keyboard: false });
         $("#gameBox").off("click")
         $(document).off("keypress")
@@ -138,11 +145,13 @@ function setGameBox(key) {
 }
 
 function makeMessage(name, message) {
+    //make the chat messages and appends in chat box
     let div = $("<div>");
     let newP = $("<p>")
     div.addClass("message");
     newP.text(name + ": " + message);
     div.append(newP);
+    //appends
     $("#chatBox").append(div).animate({
         scrollTop: div.offset().top
     }, 100)
@@ -150,11 +159,13 @@ function makeMessage(name, message) {
 }
 
 function setupChat(key) {
+    //sets up the chat listners
     gameRef.child(key + "/chat").on("child_added", function(snap) {
-        if (snap.val().name !== undefined) {
-            makeMessage(snap.val().name, snap.val().message)
-        }
-    })
+            if (snap.val().name !== undefined) {
+                makeMessage(snap.val().name, snap.val().message)
+            }
+        })
+        //sets up chat btn submiting to database
     $("#textSubmit").on("click", function() {
         if ($("#textMessage").val().trim() !== "") {
             gameRef.child(key + "/chat").push().set({
@@ -167,6 +178,7 @@ function setupChat(key) {
 }
 
 function quitGame(key) {
+    //handles turning off all lisnters
     $("#gameBox").modal("hide")
     $(".allGames").show();
     gameRef.child(key + "/chat").off();
@@ -213,12 +225,15 @@ function gameState(key) {
     let currentChoice = "";
     let theirChoice = "";
     let host = false;
+    //cheap way to add the play agian object
     let playAgianHtml = '<div> <h1 class="col-md-12">Play agian?</h1><button type="button" class="btn btn-primary" id="yesPlay">Yes</button><button type="button" class="btn btn-danger" id="noPlay">No</button></div>'
+        //checks if user is the host
     currentGame.once("value", function(snap) {
-        if (snap.val().createrName === currentUser) {
-            host = true;
-        }
-    })
+            if (snap.val().createrName === currentUser) {
+                host = true;
+            }
+        })
+        //main game play decided by 
     currentGame.child("state").on("value", function(snap) {
         let data = snap.val();
         if (data === null) {
@@ -261,6 +276,7 @@ function gameState(key) {
                     $("#yourChoice").text(currentChoice);
                 })
                 $("#choiceSubmit").on("click", function() {
+                    //use the .then statment to make sure i dont check till my data is pushed
                     currentGame.once("value", function(snap) {
                         if (host) {
                             currentGame.update({
@@ -362,7 +378,7 @@ function gameState(key) {
                             }
                         }
                     })
-                    $("yesPlay").off();
+                    $("#yesPlay").off();
                     $("#noPlay").off();
                 })
                 $("#noPlay").on("click", function() {
