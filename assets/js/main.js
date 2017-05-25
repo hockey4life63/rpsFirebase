@@ -1,5 +1,5 @@
 $('#loginBox').modal({ backdrop: 'static', keyboard: false })
-
+$("#gameWaiting").hide();
 // $("#loginBox").modal("show")
 
 
@@ -243,6 +243,7 @@ function gameState(key) {
             case state.open:
                 gameRef.orderByChild("state").equalTo(state.open).off()
                 $(".allGames").hide()
+                $("#gameWaiting").show();
                 console.log("game is open")
                 currentGame.child("chat").set({
                     chat: true
@@ -252,6 +253,7 @@ function gameState(key) {
 
             case state.joined:
                 setGameBox(key);
+                if (host) $("#gameWaiting").hide();
                 if (!host) {
                     currentGame.onDisconnect().remove()
                 }
