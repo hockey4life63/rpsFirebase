@@ -2,12 +2,13 @@ $('#loginBox').modal({ backdrop: 'static', keyboard: false })
 $("#gameWaiting").hide();
 // $("#loginBox").modal("show")
 
-
-let database = firebase.database();
-let userRef = database.ref("/users");
-let gameRef = database.ref("/game");
+//set up database refrences
+const database = firebase.database();
+const userRef = database.ref("/users");
+const gameRef = database.ref("/game");
 let currentUser = "";
-let state = {
+//define game state
+const state = {
     open: 0,
     joined: 1,
     choose: 2,
@@ -15,6 +16,7 @@ let state = {
     playagian: 4,
     quit: 5
 }
+//create timer 
 let timerObj = {
     timerID: "",
     perTurn: 15,
@@ -97,6 +99,7 @@ function createGameBtn(key) {
     gameRef.child(key).once("value", function(snap) {
         name = snap.val().createrName;
     }).then(function() {
+        //build btn
         let btn = $("<button>");
         btn.text("Join " + name + "'s game");
         //store key to game in database
@@ -108,13 +111,16 @@ function createGameBtn(key) {
         $(btn).on("click", function() {
             let key = $(this).attr("data-key")
             gameRef.child(key).transaction(function(snap) {
+                //on click set user in game and change game state
                 snap.joinerName = currentUser;
                 snap.state = state.joined
                 return snap
             }).then(function() {
+                //remove button and turn off listener for new games
                 $(btn).remove();
                 gameRef.orderByChild("state").equalTo(state.open).off()
                 $(".allGames").hide()
+                //start game
                 gameState(key);
             })
 
@@ -151,7 +157,7 @@ function makeMessage(name, message) {
     div.addClass("message");
     newP.text(name + ": " + message);
     div.append(newP);
-    //appends
+    //appends and moves chat box down to view new message
     $("#chatBox").append(div).animate({
         scrollTop: div.offset().top
     }, 100)
@@ -159,13 +165,13 @@ function makeMessage(name, message) {
 }
 
 function setupChat(key) {
-    //sets up the chat listners
+    //sets up the chat listeners
     gameRef.child(key + "/chat").on("child_added", function(snap) {
             if (snap.val().name !== undefined) {
                 makeMessage(snap.val().name, snap.val().message)
             }
         })
-        //sets up chat btn submiting to database
+        //sets up chat btn submitting to database
     $("#textSubmit").on("click", function() {
         if ($("#textMessage").val().trim() !== "") {
             gameRef.child(key + "/chat").push().set({
@@ -178,7 +184,7 @@ function setupChat(key) {
 }
 
 function quitGame(key) {
-    //handles turning off all lisnters
+    //handles turning off all listeners
     $("#gameBox").modal("hide")
     $(".allGames").show();
     gameRef.child(key + "/chat").off();
@@ -225,88 +231,83 @@ function gameState(key) {
     let currentChoice = "";
     let theirChoice = "";
     let host = false;
-    //cheap way to add the play agian object
+    let yourChoice;
+    let otherChoice;
+    //cheap way to add the play again object
     let playAgianHtml = '<div> <h1 class="col-md-12">Play agian?</h1><button type="button" class="btn btn-primary" id="yesPlay">Yes</button><button type="button" class="btn btn-danger" id="noPlay">No</button></div>'
         //checks if user is the host
     currentGame.once("value", function(snap) {
             if (snap.val().createrName === currentUser) {
                 host = true;
             }
+            yourChoice = host?"hostChoice":"joinerChoice";
+            otherChoice = host?"joinerChoice":"hostChoice";
         })
-        //main game play decided by 
+        //main game play is manage by state changes in database
     currentGame.child("state").on("value", function(snap) {
         let data = snap.val();
+        //if game gets delete end the game
         if (data === null) {
             quitGame(key);
         }
         switch (data) {
             case state.open:
+                //turn off new game listener and show waiting screen
                 gameRef.orderByChild("state").equalTo(state.open).off()
                 $(".allGames").hide()
                 $("#gameWaiting").show();
                 console.log("game is open")
+                //set up chat database inside the current game in database
                 currentGame.child("chat").set({
                     chat: true
                 });
+                //deletes game if player disconnects
                 currentGame.onDisconnect().remove()
                 break;
 
             case state.joined:
+                //sets up the game modal
                 setGameBox(key);
                 if (host) $("#gameWaiting").hide();
                 if (!host) {
+                    //eltes game if disconnected for joined player
                     currentGame.onDisconnect().remove()
                 }
-                currentGame.once("value", function(snap) {
+                //currentGame.once("value", function(snap) {
                     if (host) {
+                        //change game state to next step
                         currentGame.update({
                             state: state.choose
                         })
                     }
-                })
+                //})
 
 
                 console.log("game is joined");
                 break;
 
             case state.choose:
+                //clears text from last round/game
                 $(".winDisplay").html("");
                 $("#yourChoice").text("");
                 $("#theirChoice").text("");
                 $(".rpsChoice").on("click", function() {
+                    //set and show current choice
                     currentChoice = $(this).attr("choice");
                     $("#yourChoice").text(currentChoice);
                 })
                 $("#choiceSubmit").on("click", function() {
-                    //use the .then statment to make sure i dont check till my data is pushed
                     currentGame.once("value", function(snap) {
-                        if (host) {
-                            currentGame.update({
-                                hostChoice: currentChoice
-                            })
-                        } else {
-                            currentGame.update({
-                                joinerChoice: currentChoice
-                            })
-                        }
-
+                        //set my choice
+                        let choiceObj ={};
+                        choiceObj[yourChoice] = currentChoice
+                            currentGame.update(choiceObj)
                     }).then(function(snap) {
-                        if (host) {
-
-                            if (snap.val().joinerChoice !== "") {
-                                currentGame.update({
-                                    state: state.winner
-                                })
-                            }
-
-                        } else {
-
-                            if (snap.val().hostChoice !== "") {
-                                currentGame.update({
-                                    state: state.winner
-                                })
-                            }
-
+                        //check is other player chose and change game state if they did
+                        if (snap.val()[otherChoice] !== "") {
+                            currentGame.update({
+                                state: state.winner
+                            })
                         }
                     })
 
@@ -317,68 +318,51 @@ function gameState(key) {
             case state.winner:
                 $("#choiceSubmit").off("click");
                 $(".rpsChoice").off("click");
-                if (host) {
-                    currentGame.child("joinerChoice").once("value", function(snap) {
-                        theirChoice = snap.val();
-                    })
-                } else {
-                    currentGame.child("hostChoice").once("value", function(snap) {
-                        theirChoice = snap.val();
-                    })
-                }
-                $("#theirChoice").text(theirChoice);
-                currentGame.update({
-                    joinerChoice: "",
-                    hostChoice: ""
+                currentGame.child(otherChoice).once("value", function(snap) {
+                    theirChoice = snap.val();
+                    $("#theirChoice").text(theirChoice);
+                    if (currentChoice === "" && theirChoice === "") {
+                        $(".winDisplay").text("You both didnt pick anything you guys paying attention");
+                    } else if (theirChoice === "") {
+                        $(".winDisplay").text("They didnt pick anything YOU WIN!")
+                    } else if (currentChoice === "") {
+                        $(".winDisplay").text("You didnt pick anything You lose")
+                    } else {
+                        $(".winDisplay").text(winCheck(currentChoice, theirChoice));
+                    }
+                    if(host){
+                        currentGame.update({
+                            joinerChoice: "",
+                            hostChoice: ""
+                        })
+                        setTimeout(function() {
+                            currentGame.update({
+                                state: state.playagian
+                            })
+                        }, 5000)
+                    }
                 })
-                if (yourChoice === "") {
-                    $(".winDisplay").text("You didnt pick anything You lose")
-                } else if (theirChoice === "") {
-                    $(".winDisplay").text("They didnt pick anything YOU WIN!")
-                } else if (yourChoice === "" && theirChoice === "") {
-                    $(".winDisplay").text("You both didnt pick anything you guys paying attention");
-                } else {
-                    $(".winDisplay").text(winCheck(currentChoice, theirChoice));
-                }
-                setTimeout(function() {
-                    currentGame.update({
-                        state: state.playagian
-                    })
-                }, 5000)
+                
                 break;
 
             case state.playagian:
+                currentChoice ="";
                 console.log("at playagian state");
                 $(".winDisplay").html(playAgianHtml);
                 $("#yesPlay").on("click", function() {
                     currentGame.once("value", function(snap) {
-                        if (host) {
-                            currentGame.update({
-                                hostChoice: "yes"
-                            })
-                        } else {
-                            currentGame.update({
-                                joinerChoice: "yes"
-                            })
-                        }
+                        let choiceObj ={};
+                        choiceObj[yourChoice]= "yes";
+                            currentGame.update(choiceObj)
+                      
                     }).then(function(snap) {
-                        if (host) {
-                            if (snap.val().joinerChoice === "yes") {
+                            if (snap.val()[otherChoice] === "yes") {
                                 currentGame.update({
                                     joinerChoice: "",
                                     hostChoice: "",
                                     state: state.choose
                                 })
                             }
-                        } else {
-                            if (snap.val().hostChoice === "yes") {
-                                currentGame.update({
-                                    joinerChoice: "",
-                                    hostChoice: "",
-                                    state: state.choose
-                                })
-                            }
-                        }
                     })
                     $("#yesPlay").off();
                     $("#noPlay").off();
